@@ -316,7 +316,8 @@ function CustomerView({ restaurant, tableNumber }) {
   // Live active order tracking state
   const [activeOrderId, setActiveOrderId] = useState(null);
   const [liveOrderStatus, setLiveOrderStatus] = useState(null);
-const [waiterCalled, setWaiterCalled] = useState(false);
+  const [waiterCalled, setWaiterCalled] = useState(false);
+
   const mapDocToItem = (id, data) => ({
     id: id || data.id,
     name: data.name || data.title || "Untitled Dish",
@@ -485,6 +486,22 @@ const [waiterCalled, setWaiterCalled] = useState(false);
     });
   };
 
+  const handleCallWaiter = async () => {
+    setWaiterCalled(true);
+    setTimeout(() => setWaiterCalled(false), 8000);
+    if (isFirebaseAvailable && db) {
+      try {
+        await addDoc(collection(db, "restaurants", restaurantId, "waiterCalls"), {
+          tableNumber: tableNumber || 1,
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now(),
+          resolved: false,
+        });
+      } catch (e) { console.warn("Waiter call failed:", e); }
+    }
+    alert("Waiter notified! They will be with you shortly.");
+  };
+
   const handlePlaceOrder = async () => {
     if (cart.length === 0 || isOrderSubmitting) return;
     setIsOrderSubmitting(true);
@@ -610,26 +627,26 @@ const [waiterCalled, setWaiterCalled] = useState(false);
           React.createElement("p", { className: "text-xs text-stone-300 max-w-md leading-relaxed" }, "Browse our chef-crafted menu, customize your order, and send it directly to the kitchen in real-time.")
         ),
         React.createElement(
-  "div",
-  { className: "flex flex-col items-center gap-2 z-10 shrink-0" },
-  React.createElement(
-    "div",
-    { className: "bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center" },
-    React.createElement("span", { className: "text-[10px] text-amber-300 uppercase tracking-widest font-bold block" }, "Seated at"),
-    React.createElement("span", { className: "text-2xl font-black font-mono text-white block mt-0.5" }, `Table ${tableNumber}`)
-  ),
-  React.createElement(
-    "button",
-    {
-      onClick: handleCallWaiter,
-      disabled: waiterCalled,
-      className: waiterCalled
-        ? "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white"
-        : "px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-stone-900"
-    },
-    waiterCalled ? "✓ Waiter Notified" : "🔔 Call Waiter"
-  )
-)
+          "div",
+          { className: "flex flex-col items-center gap-2 z-10 shrink-0" },
+          React.createElement(
+            "div",
+            { className: "bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center" },
+            React.createElement("span", { className: "text-[10px] text-amber-300 uppercase tracking-widest font-bold block" }, "Seated at"),
+            React.createElement("span", { className: "text-2xl font-black font-mono text-white block mt-0.5" }, `Table ${tableNumber}`)
+          ),
+          React.createElement(
+            "button",
+            {
+              onClick: handleCallWaiter,
+              disabled: waiterCalled,
+              className: waiterCalled
+                ? "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white"
+                : "px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-stone-900"
+            },
+            waiterCalled ? "✓ Waiter Notified" : "🔔 Call Waiter"
+          )
+        )
       )
     ),
 
@@ -1132,26 +1149,26 @@ function KitchenDashboard({ restaurant, onLogout }) {
       )
     ),
     waiterCalls.length > 0 && React.createElement(
-  "div",
-  { className: "mt-4 bg-amber-500/10 border-2 border-amber-500 rounded-2xl p-3 flex flex-wrap items-center gap-2" },
-  React.createElement("span", { className: "text-xs font-black uppercase tracking-wider text-amber-400" }, "🔔 Waiter Calls:"),
-  waiterCalls.map(c => React.createElement(
-    "div",
-    { key: c.id, className: "flex items-center gap-2 bg-amber-500 text-stone-900 px-3 py-1 rounded-xl text-xs font-bold" },
-    React.createElement("span", null, `Table ${c.tableNumber}`),
+      "div",
+      { className: "mt-4 bg-amber-500/10 border-2 border-amber-500 rounded-2xl p-3 flex flex-wrap items-center gap-2" },
+      React.createElement("span", { className: "text-xs font-black uppercase tracking-wider text-amber-400" }, "🔔 Waiter Calls:"),
+      waiterCalls.map(c => React.createElement(
+        "div",
+        { key: c.id, className: "flex items-center gap-2 bg-amber-500 text-stone-900 px-3 py-1 rounded-xl text-xs font-bold" },
+        React.createElement("span", null, `Table ${c.tableNumber}`),
+        React.createElement(
+          "button",
+          {
+            onClick: () => resolveCall(c.id),
+            className: "bg-stone-900 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
+          },
+          "✓"
+        )
+      ))
+    ),
     React.createElement(
-      "button",
-      {
-        onClick: () => resolveCall(c.id),
-        className: "bg-stone-900 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
-      },
-      "✓"
-    )
-  ))
-),
-React.createElement(
-  "div",
-  { className: "grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 flex-1 items-start" },
+      "div",
+      { className: "grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 flex-1 items-start" },
       React.createElement(
         "div",
         { className: "bg-stone-800/80 rounded-2xl p-4 border border-stone-700 flex flex-col min-h-[500px]" },
@@ -2390,21 +2407,7 @@ function PinLoginModal({ restaurants, defaultRestId, onSuccess, onCancel }) {
 
     setError("Invalid Staff PIN code");
   };
-const handleCallWaiter = async () => {
-  setWaiterCalled(true);
-  setTimeout(() => setWaiterCalled(false), 8000);
-  if (isFirebaseAvailable && db) {
-    try {
-      await addDoc(collection(db, "restaurants", restaurantId, "waiterCalls"), {
-        tableNumber: tableNumber || 1,
-        createdAt: new Date().toISOString(),
-        timestamp: Date.now(),
-        resolved: false,
-      });
-    } catch (e) { console.warn("Waiter call failed:", e); }
-  }
-  alert("Waiter notified! They will be with you shortly.");
-};
+
   return React.createElement(
     "div",
     { className: "fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans" },
@@ -2606,4 +2609,4 @@ const root = createRoot(container);
 root.render(React.createElement(App));
     </script>
   </body>
-</html>
+  </html>
